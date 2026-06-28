@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>互动英语单词学习背诵网页</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-main: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --success: #10b981;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+        body { background-color: var(--bg-main); color: var(--text-dark); display: flex; flex-direction: column; min-height: 100vh; }
+
+        header { background-color: #ffffff; padding: 1.5rem 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .logo { display: flex; align-items: center; gap: 0.5rem; font-size: 1.25rem; font-weight: 700; color: var(--primary); }
+        .nav-modes { display: flex; gap: 0.5rem; background: #f1f5f9; padding: 0.25rem; border-radius: 0.5rem; }
+        .mode-btn { padding: 0.5rem 1rem; border: none; background: transparent; border-radius: 0.375rem; cursor: pointer; font-weight: 500; color: var(--text-muted); transition: all 0.2s; }
+        .mode-btn.active { background: #ffffff; color: var(--primary); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
+        .main-container { max-width: 1200px; width: 100%; margin: 2rem auto; padding: 0 1rem; display: grid; grid-template-columns: 300px 1fr; gap: 2rem; flex-grow: 1; }
+
+        /* 左侧列表 */
+        .sidebar { background: #ffffff; border-radius: 1rem; padding: 1rem; box-shadow: var(--shadow); max-height: calc(100vh - 180px); overflow-y: auto; }
+        .sidebar h3 { font-size: 1rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; }
+        .word-item { display: flex; justify-content: space-between; padding: 0.75rem 1rem; border-radius: 0.5rem; cursor: pointer; margin-bottom: 0.25rem; transition: all 0.2s; }
+        .word-item:hover { background: #f1f5f9; }
+        .word-item.active { background: #eef2ff; color: var(--primary); font-weight: 600; }
+        .word-item .word-ch { font-size: 0.85rem; color: var(--text-muted); font-weight: normal; }
+        .word-item.active .word-ch { color: #818cf8; }
+
+        /* 卡片区域 */
+        .workspace { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; }
+        .flashcard-wrapper { perspective: 1000px; width: 100%; max-width: 550px; height: 420px; cursor: pointer; }
+        .flashcard { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: var(--shadow); border-radius: 1.25rem; }
+        .flashcard.flipped { transform: rotateY(180deg); }
+        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 1.25rem; background: var(--card-bg); padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: space-between; border: 1px solid #e2e8f0; }
+        .card-back { transform: rotateY(180deg); background: #fafafa; justify-content: center; gap: 1.5rem; text-align: center; }
+        
+        .word-image-container { width: 100%; height: 200px; border-radius: 0.75rem; overflow: hidden; background: #f1f5f9; margin-bottom: 1rem; }
+        .word-image { width: 100%; height: 100%; object-fit: cover; }
+        .word-en { font-size: 2.25rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem; text-align: center;}
+        
+        /* 播放按钮 */
+        .audio-btn { background: #eef2ff; border: none; width: 3.5rem; height: 3.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--primary); transition: all 0.2s; }
+        .audio-btn:hover { background: var(--primary); color: #ffffff; transform: scale(1.05); }
+        .audio-btn svg { width: 1.5rem; height: 1.5rem; fill: currentColor; }
+
+        /* 翻面内容 */
+        .meaning-zh { font-size: 1.75rem; font-weight: 700; color: #0f172a; }
+        .meaning-en { font-size: 1rem; color: var(--text-muted); font-style: italic; max-width: 90%; }
+        .example-box { background: #ffffff; border-left: 4px solid var(--primary); padding: 1rem; border-radius: 0 0.5rem 0.5rem 0; text-align: left; width: 100%; box-shadow: 0 1px 2px rgba(0,0,0,0.05); position: relative; }
+        .example-en { font-size: 1rem; font-weight: 600; color: var(--text-dark); margin-bottom: 0.25rem; padding-right: 2rem; }
+        .example-zh { font-size: 0.9rem; color: var(--text-muted); }
+        .example-audio-btn { position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--text-muted); cursor: pointer; }
+        .example-audio-btn:hover { color: var(--primary); }
+
+        .controls { display: flex; gap: 1rem; margin-top: 1rem; }
+        .btn { padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; }
+        .btn-outline { background: #ffffff; border: 1px solid #e2e8f0; color: var(--text-dark); }
+        .btn-outline:hover { background: #f1f5f9; }
+        .btn-primary { background: var(--primary); color: #ffffff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+
+        /* 列表模式 */
+        .grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; width: 100%; }
+        .grid-card { background: #ffffff; border-radius: 1rem; padding: 1.5rem; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.75rem; }
+        .hidden { display: none !important; }
+        .full-width { grid-template-columns: 1fr !important; }
+
+        @media (max-width: 768px) {
+            .main-container { grid-template-columns: 1fr; }
+            .sidebar { max-height: 200px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">单词互动闪卡</div>
+        <div class="nav-modes">
+            <button class="mode-btn active" id="mode-flashcard" onclick="switchMode('flashcard')">卡片模式</button>
+            <button class="mode-btn" id="mode-grid" onclick="switchMode('grid')">列表模式</button>
+        </div>
+    </header>
+
+    <div class="main-container" id="main-layout">
+        <div class="sidebar" id="word-sidebar">
+            <h3>单词列表 (<span id="total-count">21</span>)</h3>
+            <div id="sidebar-list"></div>
+        </div>
+
+        <div class="workspace" id="workspace-area">
+            <div id="flashcard-layout" class="workspace">
+                <div class="flashcard-wrapper" onclick="flipCard()">
+                    <div class="flashcard" id="card-element">
+                        <div class="card-face card-front">
+                            <div class="word-image-container"><img src="" class="word-image" id="card-img"></div>
+                            <div class="word-en" id="card-word">Word</div>
+                            <button class="audio-btn" onclick="event.stopPropagation(); playSound();" title="发音">
+                                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                            </button>
+                        </div>
+                        <div class="card-face card-back">
+                            <div class="meaning-zh" id="card-zh">中文意思</div>
+                            <div class="meaning-en" id="card-en-def">English Definition</div>
+                            <div class="example-box">
+                                <div class="example-en" id="card-ex-en">Example sentence.</div>
+                                <div class="example-zh" id="card-ex-zh">例句中文翻译。</div>
+                                <button class="example-audio-btn" onclick="event.stopPropagation(); playExampleSound();" title="朗读例句">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button class="btn btn-outline" onclick="prevWord()">上一个</button>
+                    <button class="btn btn-primary" onclick="event.stopPropagation(); flipCard();">翻转卡片</button>
+                    <button class="btn btn-outline" onclick="nextWord()">下一个</button>
+                </div>
+            </div>
+
+            <div id="grid-layout" class="grid-view hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        // 词库数据包含：单词、中文、英文解释、英文例句、中文例句、高清图片链接
+        const wordsData = [
+            { word: "Rich", zh: "富有的", enDef: "Having a great deal of money or assets.", exEn: "The rich explorer funded his own expedition.", exZh: "这位富有的探险家资助了他自己的探险队。", img: "https://images.unsplash.com/photo-1589758438368-0ad531db3366?w=500&auto=format&fit=crop&q=60" },
+            { word: "greedy", zh: "贪婪的", enDef: "Intense and selfish desire for wealth or power.", exEn: "The greedy king wanted all the gold in the world.", exZh: "贪婪的国王想要世界上所有的黄金。", img: "https://images.unsplash.com/photo-1534951009808-766178b47a4f?w=500&auto=format&fit=crop&q=60" },
+            { word: "earthquake", zh: "地震", enDef: "A sudden violent shaking of the ground.", exEn: "The earthquake shook the entire city violently.", exZh: "地震剧烈地摇晃着整个城市。", img: "https://images.unsplash.com/photo-1594897030264-ab7d87efc473?w=500&auto=format&fit=crop&q=60" },
+            { word: "strike", zh: "袭击/罢工", enDef: "To hit forcibly; or a refusal to work.", exEn: "Lightning can strike the same place twice.", exZh: "闪电可能连续袭击同一个地方两次。", img: "https://images.unsplash.com/photo-1526470608268-f674ce90ebd4?w=500&auto=format&fit=crop&q=60" },
+            { word: "finally", zh: "终于/最后", enDef: "After a long time, typically involving difficulty.", exEn: "After climbing for hours, they finally reached the top.", exZh: "爬了几个小时后，他们终于到达了山顶。", img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&auto=format&fit=crop&q=60" },
+            { word: "sink", zh: "下沉", enDef: "To go down below the surface of water.", exEn: "Heavy stones will sink to the bottom of the water.", exZh: "沉重的石头会沉入水底。", img: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=500&auto=format&fit=crop&q=60" },
+            { word: "sank", zh: "下沉(过去式)", enDef: "Past tense of 'sink'.", exEn: "The ancient ship sank during the massive storm.", exZh: "那艘古老的船在大风暴中沉没了。", img: "https://images.unsplash.com/photo-1500049242364-5f500807cdd7?w=500&auto=format&fit=crop&q=60" },
+            { word: "report", zh: "报告", enDef: "A spoken or written account of something observed.", exEn: "The scientist published a detailed report.", exZh: "科学家发布了一份详细的报告。", img: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=500&auto=format&fit=crop&q=60" },
+            { word: "explorer", zh: "探险家", enDef: "A person who travels to unfamiliar places.", exEn: "The brave explorer traveled deep into the jungle.", exZh: "勇敢的探险家深入到了丛林中。", img: "https://images.unsplash.com/photo-1527631746610-bca00a040d60?w=500&auto=format&fit=crop&q=60" },
+            { word: "explore", zh: "探索", enDef: "To travel through an unfamiliar area to learn about it.", exEn: "We want to explore the deepest parts of the cave.", exZh: "我们想要探索洞穴的最深处。", img: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=500&auto=format&fit=crop&q=60" },
+            { word: "astronomer", zh: "天文学家", enDef: "An expert in or student of astronomy.", exEn: "The astronomer discovered a new comet.", exZh: "天文学家发现了一颗新彗星。", img: "https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?w=500&auto=format&fit=crop&q=60" },
+            { word: "natural", zh: "自然的", enDef: "Existing in or caused by nature.", exEn: "This park is full of beautiful natural wonders.", exZh: "这个公园里到处都是美丽的自然奇观。", img: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=500&auto=format&fit=crop&q=60" },
+            { word: "speed", zh: "速度", enDef: "The rate at which someone or something moves.", exEn: "The cheetah can run at an incredible speed.", exZh: "猎豹奔跑的速度惊人。", img: "https://images.unsplash.com/photo-1511919884226-fd3cad34687c?w=500&auto=format&fit=crop&q=60" },
+            { word: "increase", zh: "增加", enDef: "Become or make greater in size, amount, or degree.", exEn: "The store hopes to increase its sales this month.", exZh: "这家店希望本月能增加销量。", img: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=500&auto=format&fit=crop&q=60" },
+            { word: "Pass", zh: "通过", enDef: "To move past something, or succeed in an exam.", exEn: "She studied hard and managed to pass the exam.", exZh: "她努力学习，成功通过了考试。", img: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500&auto=format&fit=crop&q=60" },
+            { word: "purpose", zh: "目的", enDef: "The reason for which something is done or created.", exEn: "The purpose of this meeting is to plan the trip.", exZh: "这次会议的目的是计划旅行。", img: "https://images.unsplash.com/photo-1518133683791-0b9de5a055f0?w=500&auto=format&fit=crop&q=60" },
+            { word: "piece", zh: "块/片", enDef: "A portion of an object or of material.", exEn: "Would you like another piece of chocolate cake?", exZh: "你想再来一块巧克力蛋糕吗？", img: "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=500&auto=format&fit=crop&q=60" },
+            { word: "solid", zh: "固体的", enDef: "Firm and stable in shape; not liquid.", exEn: "Water becomes solid when it freezes into ice.", exZh: "水结冰后就会变成固体。", img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=500&auto=format&fit=crop&q=60" },
+            { word: "evidence", zh: "证据", enDef: "Facts indicating whether a belief is true.", exEn: "The police found solid evidence at the scene.", exZh: "警方在现场找到了确凿的证据。", img: "https://images.unsplash.com/photo-1505664194779-8beaceb93744?w=500&auto=format&fit=crop&q=60" },
+            { word: "strange", zh: "奇怪的", enDef: "Unusual or surprising.", exEn: "I heard a strange noise coming from the room.", exZh: "我听到房间里传来一阵奇怪的声音。", img: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&auto=format&fit=crop&q=60" },
+            { word: "direction", zh: "方向", enDef: "A course along which someone or something moves.", exEn: "The compass points in the north direction.", exZh: "指南针指向北方。", img: "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=500&auto=format&fit=crop&q=60" }
+        ];
+
+        let currentIndex = 0;
+        let isFlipped = false;
+
+        function init() {
+            renderSidebar();
+            renderCard();
+            renderGrid();
+            
+            // 绑定键盘事件：空格翻转，左右方向键切换
+            document.addEventListener('keydown', (e) => {
+                if (document.getElementById('flashcard-layout').classList.contains('hidden')) return;
+                if (e.code === 'Space') { e.preventDefault(); flipCard(); }
+                else if (e.code === 'ArrowLeft') prevWord();
+                else if (e.code === 'ArrowRight') nextWord();
+            });
+        }
+
+        function renderSidebar() {
+            const sidebarList = document.getElementById('sidebar-list');
+            sidebarList.innerHTML = '';
+            wordsData.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = `word-item ${index === currentIndex ? 'active' : ''}`;
+                div.onclick = () => selectWord(index);
+                div.innerHTML = `<span>${item.word}</span><span class="word-ch">${item.zh}</span>`;
+                sidebarList.appendChild(div);
+            });
+        }
+
+        function renderCard() {
+            const card = wordsData[currentIndex];
+            document.getElementById('card-word').innerText = card.word;
+            document.getElementById('card-zh').innerText = card.zh;
+            document.getElementById('card-en-def').innerText = card.enDef;
+            document.getElementById('card-ex-en').innerText = card.exEn;
+            document.getElementById('card-ex-zh').innerText = card.exZh;
+            document.getElementById('card-img').src = card.img;
+            
+            const items = document.querySelectorAll('.word-item');
+            items.forEach((item, idx) => { idx === currentIndex ? item.classList.add('active') : item.classList.remove('active') });
+        }
+
+        function renderGrid() {
+            const gridLayout = document.getElementById('grid-layout');
+            wordsData.forEach((item) => {
+                const card = document.createElement('div');
+                card.className = 'grid-card';
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:start;">
+                        <strong style="font-size: 1.25rem; color: var(--primary);">${item.word}</strong>
+                        <button class="audio-btn" style="width:2rem; height:2rem;" onclick="speakText('${item.word}')">▶</button>
+                    </div>
+                    <div style="font-weight:600;">${item.zh}</div>
+                    <div style="font-size:0.85rem; color:var(--text-muted); font-style:italic;">${item.enDef}</div>
+                `;
+                gridLayout.appendChild(card);
+            });
+        }
+
+        function flipCard() {
+            isFlipped = !isFlipped;
+            const cardEl = document.getElementById('card-element');
+            isFlipped ? cardEl.classList.add('flipped') : cardEl.classList.remove('flipped');
+        }
+
+        function selectWord(index) { currentIndex = index; resetFlipAndRender(); }
+        function nextWord() { currentIndex = (currentIndex + 1) % wordsData.length; resetFlipAndRender(); }
+        function prevWord() { currentIndex = (currentIndex - 1 + wordsData.length) % wordsData.length; resetFlipAndRender(); }
+        
+        function resetFlipAndRender() {
+            isFlipped = false;
+            document.getElementById('card-element').classList.remove('flipped');
+            renderCard();
+            playSound();
+        }
+
+        function playSound() { speakText(wordsData[currentIndex].word); }
+        function playExampleSound() { speakText(wordsData[currentIndex].exEn); }
+
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US';
+                window.speechSynthesis.speak(utterance);
+            } else { alert("浏览器不支持语音功能"); }
+        }
+
+        function switchMode(mode) {
+            const flash = document.getElementById('flashcard-layout'), grid = document.getElementById('grid-layout');
+            const btnFlash = document.getElementById('mode-flashcard'), btnGrid = document.getElementById('mode-grid');
+            const sidebar = document.getElementById('word-sidebar'), main = document.getElementById('main-layout');
+
+            if (mode === 'flashcard') {
+                btnFlash.classList.add('active'); btnGrid.classList.remove('active');
+                flash.classList.remove('hidden'); grid.classList.add('hidden');
+                sidebar.classList.remove('hidden'); main.classList.remove('full-width');
+            } else {
+                btnGrid.classList.add('active'); btnFlash.classList.remove('active');
+                grid.classList.remove('hidden'); flash.classList.add('hidden');
+                sidebar.classList.add('hidden'); main.classList.add('full-width');
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
